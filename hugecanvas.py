@@ -1,4 +1,6 @@
 import cv2
+import numpy as np
+import logging
 
 #a range is always spacified with the min and max=min+width
 #2d region consists of two ranges.
@@ -38,33 +40,45 @@ class HugeCanvas():
     size is determined by the tiles.
     !!!   it is better to fix the tile size. (128x128, for example)
     """
-    def __init__(self):
+    def __init__(self, tilesize=128):
         self.tiles = dict()
-        self.tilesize = 128
+        if type(tilesize) is int:
+            self.tilesize = (tilesize, tilesize)
+        else:
+            assert type(tilesize) is tuple
+            self.tilesize = tilesize
+        self.region = None
         
-    def tiles_containing(self, region):
+    def tiles_containing(self, region, includeempty=False):
         """
         return the tiles containing the given region
         """
+        logger = logging.getLogger()
         t = []
-        for tile in self.tiles:
-            tregion = ((tile[0], tile[0]+self.tilesize), (tile[1], tile[1]+self.tilesize))
-            o = overlap2D(tregion, region):
-            t.append((tile, o))
+        xran, yran = region
+        xran = xran[0]//self.tilesize[0], (xran[1]+self.tilesize[0]-1)//self.tilesize[0]
+        yran = yran[0]//self.tilesize[1], (yran[1]+self.tilesize[1]-1)//self.tilesize[1]
+        for ix in range(xran[0],xran[1]):
+            for iy in range(yran[0],yran[1]):
+                tile = (ix*self.tilesize[0], iy*self.tilesize[1])
+                logger.debug("Tile: {0}".format(tile))
+                if (tile in self.tiles) or includeempty:
+                    tregion = ((tile[0], tile[0]+self.tilesize[0]), (tile[1], tile[1]+self.tilesize[1]))
+                    o = overlap2D(tregion, region)
+                    t.append((tile, o))
         return t
 
     def get_region(self, region):
         xrange, yrange = region
-        image = np.zeros((yrange[1]-yrange[0], xrange[1] - xrayge[0], 3), dtype=np.uint8)
+        image = np.zeros((yrange[1]-yrange[0], xrange[1] - xrange[0], 3), dtype=np.uint8)
         for tile, overlap in self.tiles_containing(region):
+            src = self.tiles[tile]
             originx, originy = tile
-            src = tiles[tile]
-            h,w = src.shape[:2]
             xr, yr = overlap
-            image[yr[0]-yrange[0]:yr[1]-yrange[0], xr[0]-xrange[0]:xr[1]-xrange[0], 3] = src[yr[0]-originy:yr[1]-originy, xr[0]-originx:xr[1]-originx, 3]
+            image[yr[0]-yrange[0]:yr[1]-yrange[0], xr[0]-xrange[0]:xr[1]-xrange[0], :] = src[yr[0]-originy:yr[1]-originy, xr[0]-originx:xr[1]-originx, :]
         return image
 
-    def put_image(self, position, image):
+    def put_image(self, position, image, linear_alpha=None):
         """
         split the existent tiles
         and put a big single tile.
@@ -72,4 +86,40 @@ class HugeCanvas():
         otherwise, a different algorithm is required.
         """
         h,w = image.shape[:2]
-    
+        xrange, yrange = (position[0], position[0]+w), (position[1], position[1]+h)
+        region = (xrange,yrange)
+        for tile, overlap in self.tiles_containing(region, includeempty=True):
+            if tile not in self.tiles:
+                self.tiles[tile] = np.zeros((self.tilesize[1], self.tilesize[0], 3), dtype=np.uint8)
+            src = self.tiles[tile]
+            originx, originy = tile
+            xr, yr = overlap
+            if linear_alpha is None:
+                src[yr[0]-originy:yr[1]-originy, xr[0]-originx:xr[1]-originx, :] = image[yr[0]-yrange[0]:yr[1]-yrange[0], xr[0]-xrange[0]:xr[1]-xrange[0], :]
+            else:
+                src[yr[0]-originy:yr[1]-originy, xr[0]-originx:xr[1]-originx, :] = linear_alpha[xr[0]-xrange[0]:xr[1]-xrange[0], :]*image[yr[0]-yrange[0]:yr[1]-yrange[0], xr[0]-xrange[0]:xr[1]-xrange[0], :] + (1-linear_alpha[xr[0]-xrange[0]:xr[1]-xrange[0], :])*src[yr[0]-originy:yr[1]-originy, xr[0]-originx:xr[1]-originx, :]
+                
+            #rewrite the item explicitly
+            self.tiles[tile] = src
+        if self.region is None:
+            self.region = ((position[0], position[0]+w), (position[1], position[1]+h))
+        else:
+            self.region = ((min(self.region[0][0], position[0]),
+                           max(self.region[0][1], position[0]+w)),
+                          (min(self.region[1][0], position[1]),
+                           max(self.region[1][1], position[1]+h)))
+
+    def get_image(self):
+        return self.get_region(self.region)
+
+def test():
+    canvas = HugeCanvas(64)
+    img = cv2.imread("sample.png")
+    canvas.put_image((-10,-10), img)
+    canvas.put_image((100,120), img)
+    c = canvas.get_full()
+    cv2.imshow("canvas",c)
+    cv2.waitKey(0)
+
+if __name__ == "__main__":
+    test()
