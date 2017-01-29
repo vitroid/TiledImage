@@ -5,12 +5,22 @@ import cv2
 import numpy as np
 
 class CachedCanvas(hugecanvas.HugeCanvas):
-    def __init__(self, tilesize=128, cachesize=10):
+    def __init__(self, dir="canvas.pngs", tilesize=128, cachesize=10, clean=True):
         super(CachedCanvas, self).__init__(tilesize)
-        self.tiles = tileimagedb.TileImageDB(dir="testdir",cachesize=cachesize,default=np.zeros((self.tilesize[1],self.tilesize[0],3), dtype=np.uint8))
-
+        self.tiles = tileimagedb.TileImageDB(dir=dir,
+                                             cachesize=cachesize,
+                                             default=np.zeros((self.tilesize[1],self.tilesize[0],3), dtype=np.uint8))
+        #just for done()
+        self.clean = clean
+        self.dir   = dir   
+        
     def done(self):
-        self.tiles.done()
+        with open(self.dir + "/info.txt", "w") as file:
+            file.write("{0} {1} xrange\n".format(*self.region[0]))
+            file.write("{0} {1} yrange\n".format(*self.region[1]))
+            file.write("{0} {1} tilesize\n".format(*self.tilesize))
+            file.write("0 0 0 background\n")   #0..255, black
+        self.tiles.done(self.clean)
     
 def test():
     debug = True
