@@ -32,18 +32,15 @@ class TileImageDB():
         try:
             modified, value = self.cache[key]
         except KeyError:
-            self.nmiss += 1
-            logger.debug("cache miss key:{0}".format(key))
             filename = self.key_to_filename(key)
             if os.path.exists(filename):
                 value = cv2.imread(filename)
+                self.nmiss += 1
+                #logger.info("cache miss key:{0}".format(key))
             else:
+                #first access is not a "miss"
                 value = default
             self.cache[key] = [False, value]
-        #Automatically optimize the cache size
-        if self.nmiss*100//self.nget > 20:
-            self.cache.addTailNode(1)
-            logger.info("Cache miss: {0}% @ {1}".format(self.nmiss*100//self.nget, self.cache.size()))
         return value
 
     def __setitem__(self, key, value):
@@ -75,4 +72,20 @@ class TileImageDB():
             for k in self.cache:
                 self.writeback(k, self.cache.peek(k))  #peek do not affect the order
         logger = logging.getLogger()
-        logger.info("Cache miss: {0}%".format(self.nmiss*100//self.nget))
+
+    def cachemiss(self):
+        """
+        report cache miss ratio
+        """
+        return self.nmiss, self.nget, self.cache.size()
+
+    def adjust_cache_size(self):
+        """
+        Automatically optimize the cache size
+        Should not be adjusted in the final merging process
+        """
+        percent = self.nmiss*100//self.nget
+        if percent > 50:
+            self.cache.addTailNode(10)
+        elif percent > 20:
+            self.cache.addTailNode(1)

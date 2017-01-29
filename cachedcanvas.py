@@ -21,7 +21,15 @@ class CachedCanvas(hugecanvas.HugeCanvas):
             file.write("{0} {1} tilesize\n".format(*self.tilesize))
             file.write("0 0 0 background\n")   #0..255, black
         self.tiles.done(self.clean)
-    
+
+    def put_image(self, pos, img, linear_alpha=None):
+        super(CachedCanvas, self).put_image(pos, img, linear_alpha)
+        logger = logging.getLogger()
+        nmiss, naccess, cachesize = self.tiles.cachemiss()
+        logger.info("Cache miss {0}% @ {1}".format(nmiss*100//naccess, cachesize))
+        self.tiles.adjust_cache_size()
+        
+        
 def test():
     debug = True
     if debug:
