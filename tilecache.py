@@ -13,17 +13,21 @@ def remove_folder(path):
 class TileCache():
     """
     A tile of images that are mostly stored in files
+    It does not care the integrity of the image.
     """
-    def __init__(self, dir="tileimage", cachesize=10, default=None):
-        remove_folder(dir)
-        os.mkdir(dir)
+    def __init__(self, mode, dir="tileimage", cachesize=10, default=None, fileext="png"):
+        if mode == "new":
+            remove_folder(dir)
+            os.mkdir(dir)
         self.dir = dir
         self.cache = pylru.lrucache(cachesize, callback=self.writeback)
         self.nget = 0
         self.nmiss = 0
-        
+        self.fileext = fileext
+        self.default = default
+                
     def key_to_filename(self, key):
-        return "{0}/{1},{2}.png".format(self.dir, *key)
+        return "{0}/{1},{2}.{3}".format(self.dir, *key, self.fileext)
     
     def __getitem__(self, key):
         logger = logging.getLogger()
@@ -39,7 +43,8 @@ class TileCache():
                 #logger.info("cache miss key:{0}".format(key))
             else:
                 #first access is not a "miss"
-                value = default
+                logger.info("blank key:{0}".format(key))
+                value = self.default
             self.cache[key] = [False, value]
         return value
 
@@ -59,19 +64,19 @@ class TileCache():
             cv2.imwrite(filename, value[1])
         
     def __contains__(self, key):
+        #logger = logging.getLogger()
+        #logger.debug("Query: {0}".format(key))
         if key in self.cache:
+            #logger.debug("On cache: {0}".format(key))
             return True
         filename = self.key_to_filename(key)
+        #logger.debug("On file: {0}".format(filename))
         return os.path.exists(filename)
         
-    def done(self, clean):
-        if clean:
-            remove_folder(self.dir)
-        else:
-            #purge the cached images to disk
-            for k in self.cache:
-                self.writeback(k, self.cache.peek(k))  #peek do not affect the order
-        logger = logging.getLogger()
+    def done(self):
+        #purge the cached images to disk
+        for k in self.cache:
+            self.writeback(k, self.cache.peek(k))  #peek do not affect the order
 
     def cachemiss(self):
         """

@@ -1,2 +1,4 @@
 testdir/*
 *pyc
+*.pngs/*
+test.jpg

@@ -40,7 +40,7 @@ class TiledImage():
     size is determined by the tiles.
     !!!   it is better to fix the tile size. (128x128, for example)
     """
-    def __init__(self, tilesize=128):
+    def __init__(self, tilesize=128, bgcolor=(100,100,100)):
         self.tiles = dict()
         if type(tilesize) is int:
             self.tilesize = (tilesize, tilesize)
@@ -48,6 +48,7 @@ class TiledImage():
             assert type(tilesize) is tuple
             self.tilesize = tilesize
         self.region = None
+        self.bgcolor = np.array(bgcolor)
         
     def tiles_containing(self, region, includeempty=False):
         """
@@ -61,7 +62,7 @@ class TiledImage():
         for ix in range(xran[0],xran[1]):
             for iy in range(yran[0],yran[1]):
                 tile = (ix*self.tilesize[0], iy*self.tilesize[1])
-                #logger.debug("Tile: {0}".format(tile))
+                logger.debug("Tile: {0}".format(tile))
                 if (tile in self.tiles) or includeempty:
                     tregion = ((tile[0], tile[0]+self.tilesize[0]), (tile[1], tile[1]+self.tilesize[1]))
                     o = overlap2D(tregion, region)
@@ -73,6 +74,7 @@ class TiledImage():
         #logger.debug("Get region {0} {1}".format(region,self.tiles))
         xrange, yrange = region
         image = np.zeros((yrange[1]-yrange[0], xrange[1] - xrange[0], 3), dtype=np.uint8)
+        image[:,:] = self.bgcolor
         for tile, overlap in self.tiles_containing(region):
             #logger.debug("Should get a tile at {0} {1}".format(tile,self.tiles))
             src = self.tiles[tile]
@@ -94,6 +96,7 @@ class TiledImage():
         for tile, overlap in self.tiles_containing(region, includeempty=True):
             if tile not in self.tiles:
                 self.tiles[tile] = np.zeros((self.tilesize[1], self.tilesize[0], 3), dtype=np.uint8)
+                self.tiles[tile][:,:] = self.bgcolor
             src = self.tiles[tile]
             originx, originy = tile
             xr, yr = overlap
