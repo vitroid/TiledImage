@@ -27,7 +27,7 @@ class TileImageDB():
         logger = logging.getLogger()
         logger.debug("getitem key:{0}".format(key))
         try:
-            value = self.cache[key]
+            modified, value = self.cache[key]
         except KeyError:
             logger.debug("cache miss key:{0}".format(key))
             filename = self.key_to_filename(key)
@@ -35,23 +35,27 @@ class TileImageDB():
                 value = cv2.imread(filename)
             else:
                 value = default
-            self.cache[key] = value
+            self.cache[key] = [False, value]
         return value
 
     def __setitem__(self, key, value):
-        self.cache[key] = value
+        logger = logging.getLogger()
+        logger.debug("update key:{0}".format(key))
+        self.cache[key] = [True, value]
             
-
     def writeback(self, key, value):
         """
         write back when it is purged from cache
         """
         logger = logging.getLogger()
-        logger.info("purge key:{0}".format(key))
-        filename = self.key_to_filename(key)
-        cv2.imwrite(filename, value)
+        if value[0]:
+            logger.info("purge key:{0}".format(key))
+            filename = self.key_to_filename(key)
+            cv2.imwrite(filename, value[1])
         
     def __contains__(self, key):
+        if key in self.cache:
+            return True
         filename = self.key_to_filename(key)
         return os.path.exists(filename)
         

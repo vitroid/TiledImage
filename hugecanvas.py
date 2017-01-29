@@ -61,7 +61,7 @@ class HugeCanvas():
         for ix in range(xran[0],xran[1]):
             for iy in range(yran[0],yran[1]):
                 tile = (ix*self.tilesize[0], iy*self.tilesize[1])
-                logger.debug("Tile: {0}".format(tile))
+                #logger.debug("Tile: {0}".format(tile))
                 if (tile in self.tiles) or includeempty:
                     tregion = ((tile[0], tile[0]+self.tilesize[0]), (tile[1], tile[1]+self.tilesize[1]))
                     o = overlap2D(tregion, region)
@@ -69,9 +69,12 @@ class HugeCanvas():
         return t
 
     def get_region(self, region):
+        logger = logging.getLogger()
+        #logger.debug("Get region {0} {1}".format(region,self.tiles))
         xrange, yrange = region
         image = np.zeros((yrange[1]-yrange[0], xrange[1] - xrange[0], 3), dtype=np.uint8)
         for tile, overlap in self.tiles_containing(region):
+            #logger.debug("Should get a tile at {0} {1}".format(tile,self.tiles))
             src = self.tiles[tile]
             originx, originy = tile
             xr, yr = overlap
@@ -113,7 +116,7 @@ class HugeCanvas():
         return self.get_region(self.region)
 
 def test():
-    canvas = HugeCanvas(64)
+    canvas = HugeCanvas(tilesize=(8,24))
     img = cv2.imread("sample.png")
     canvas.put_image((-10,-10), img)
     canvas.put_image((100,120), img)
