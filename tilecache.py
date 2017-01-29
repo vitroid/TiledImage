@@ -10,7 +10,7 @@ def remove_folder(path):
         # remove if exists
         shutil.rmtree(path)
     
-class TileImageDB():
+class TileCache():
     """
     A tile of images that are mostly stored in files
     """

@@ -34,7 +34,7 @@ def overlap2D(r1, r2):
     return None
 
 
-class HugeCanvas():
+class TiledImage():
     """
     it has no size.
     size is determined by the tiles.
@@ -116,12 +116,12 @@ class HugeCanvas():
         return self.get_region(self.region)
 
 def test():
-    canvas = HugeCanvas(tilesize=(8,24))
+    image = TiledImage(tilesize=(8,24))
     img = cv2.imread("sample.png")
-    canvas.put_image((-10,-10), img)
-    canvas.put_image((100,120), img)
-    c = canvas.get_full()
-    cv2.imshow("canvas",c)
+    image.put_image((-10,-10), img)
+    image.put_image((100,120), img)
+    c = image.get_image()
+    cv2.imshow("image",c)
     cv2.waitKey(0)
 
 if __name__ == "__main__":

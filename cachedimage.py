@@ -1,13 +1,13 @@
-import tileimagedb
-import hugecanvas
+import tilecache
+import tiledimage
 import logging
 import cv2
 import numpy as np
 
-class CachedCanvas(hugecanvas.HugeCanvas):
-    def __init__(self, dir="canvas.pngs", tilesize=128, cachesize=10, clean=True):
-        super(CachedCanvas, self).__init__(tilesize)
-        self.tiles = tileimagedb.TileImageDB(dir=dir,
+class CachedImage(tiledimage.TiledImage):
+    def __init__(self, dir="image.pngs", tilesize=128, cachesize=10, clean=True):
+        super(CachedImage, self).__init__(tilesize)
+        self.tiles = tilecache.TileCache(dir=dir,
                                              cachesize=cachesize,
                                              default=np.zeros((self.tilesize[1],self.tilesize[0],3), dtype=np.uint8))
         #just for done()
@@ -23,7 +23,7 @@ class CachedCanvas(hugecanvas.HugeCanvas):
         self.tiles.done(self.clean)
 
     def put_image(self, pos, img, linear_alpha=None):
-        super(CachedCanvas, self).put_image(pos, img, linear_alpha)
+        super(CachedImage, self).put_image(pos, img, linear_alpha)
         logger = logging.getLogger()
         nmiss, naccess, cachesize = self.tiles.cachemiss()
         logger.info("Cache miss {0}% @ {1}".format(nmiss*100//naccess, cachesize))
@@ -39,14 +39,14 @@ def test():
     else:
         logging.basicConfig(level=logging.INFO,
                             format="%(asctime)s %(levelname)s %(message)s")
-    canvas = CachedCanvas(tilesize=(64,64), cachesize=100)
+    image = CachedImage(tilesize=(64,64), cachesize=100)
     img = cv2.imread("sample.png")
-    canvas.put_image((-10,-10), img)
-    canvas.put_image((100,120), img)
+    image.put_image((-10,-10), img)
+    image.put_image((100,120), img)
     logger = logging.getLogger()
     logger.debug("start showing.")
-    c = canvas.get_image()
-    cv2.imshow("canvas",c)
+    c = image.get_image()
+    cv2.imshow("image",c)
     cv2.waitKey(0)
 
 if __name__ == "__main__":
