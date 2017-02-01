@@ -15,7 +15,10 @@ class TileCache():
     A tile of images that are mostly stored in files
     It does not care the integrity of the image.
     """
-    def __init__(self, mode, dir="tileimage", cachesize=10, default=None, fileext="png"):
+    def __init__(self, mode, dir="tileimage", cachesize=10, default=None, fileext="png", hook=None):
+        """
+        Hook is a function like put_image, that is called when a tile is rewritten
+        """
         if mode == "new":
             remove_folder(dir)
             os.mkdir(dir)
@@ -25,7 +28,11 @@ class TileCache():
         self.nmiss = 0
         self.fileext = fileext
         self.default = default
-                
+        self.hook = hook
+
+    def set_hook(self, hook):
+        self.hook = hook
+        
     def key_to_filename(self, key):
         return "{0}/{1},{2}.{3}".format(self.dir, *key, self.fileext)
     
@@ -52,6 +59,8 @@ class TileCache():
         logger = logging.getLogger()
         logger.debug("update key:{0}".format(key))
         self.cache[key] = [True, value]
+        if self.hook is not None:
+            self.hook(key, value)
             
     def writeback(self, key, value):
         """

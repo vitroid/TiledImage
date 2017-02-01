@@ -5,9 +5,10 @@ import cv2
 import numpy as np
 
 class CachedImage(tiledimage.TiledImage):
-    def __init__(self, mode, dir="image.pngs", tilesize=128, cachesize=10, fileext="png", bgcolor=(0,0,0)):
+    def __init__(self, mode, dir="image.pngs", tilesize=128, cachesize=10, fileext="png", bgcolor=(0,0,0), hook=None):
         """
         if mode == "new", flush the dir.
+        hook is a function like put_image, that is called then a tile is rewritten.
         """
         logger = logging.getLogger()
         super(CachedImage, self).__init__(tilesize)
@@ -30,7 +31,8 @@ class CachedImage(tiledimage.TiledImage):
         self.tiles = tilecache.TileCache(mode, dir=dir,
                                              cachesize=cachesize,
                                              fileext=self.fileext,
-                                             default=defaulttile)
+                                             default=defaulttile,
+                                             hook = hook)
         #just for done()
         self.dir   = dir   
         
@@ -52,6 +54,9 @@ class CachedImage(tiledimage.TiledImage):
         nmiss, naccess, cachesize = self.tiles.cachemiss()
         logger.info("Cache miss {0}% @ {1} tiles".format(nmiss*100//naccess, cachesize))
         self.tiles.adjust_cache_size()
+        
+    def set_hook(self, hook):
+        self.tiles.set_hook(hook)
         
         
 def test():

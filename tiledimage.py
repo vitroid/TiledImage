@@ -105,7 +105,7 @@ class TiledImage():
             else:
                 src[yr[0]-originy:yr[1]-originy, xr[0]-originx:xr[1]-originx, :] = linear_alpha[xr[0]-xrange[0]:xr[1]-xrange[0], :]*image[yr[0]-yrange[0]:yr[1]-yrange[0], xr[0]-xrange[0]:xr[1]-xrange[0], :] + (1-linear_alpha[xr[0]-xrange[0]:xr[1]-xrange[0], :])*src[yr[0]-originy:yr[1]-originy, xr[0]-originx:xr[1]-originx, :]
                 
-            #rewrite the item explicitly
+            #rewrite the item explicitly (for caching)
             self.tiles[tile] = src
         if self.region is None:
             self.region = ((position[0], position[0]+w), (position[1], position[1]+h))
