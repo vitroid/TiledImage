@@ -59,8 +59,6 @@ class TileCache():
         logger = logging.getLogger()
         logger.debug("update key:{0}".format(key))
         self.cache[key] = [True, value]
-        if self.hook is not None:
-            self.hook(key, value)
             
     def writeback(self, key, value):
         """
@@ -71,6 +69,8 @@ class TileCache():
             #logger.info("purge key:{0}".format(key))
             filename = self.key_to_filename(key)
             cv2.imwrite(filename, value[1])
+            if self.hook is not None:
+                self.hook(key, value[1])
         
     def __contains__(self, key):
         #logger = logging.getLogger()
