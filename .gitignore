@@ -1,4 +1,8 @@
 testdir/*
 *pyc
+*.jpg
 *.pngs/*
 test.jpg
+build/*
+dist/*
+*.egg*

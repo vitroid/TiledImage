@@ -1,8 +1,10 @@
-import cv2
-import pylru #"Least Recent Used" type cache
 import os
 import logging
 import shutil
+
+#external modules
+import cv2
+import pylru #"Least Recent Used" type cache
 
 def remove_folder(path):
     # check if folder exists

@@ -1,6 +1,8 @@
+import logging
+
+#external modules
 import cv2
 import numpy as np
-import logging
 
 #a range is always spacified with the min and max=min+width
 #2d region consists of two ranges.

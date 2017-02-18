@@ -1,8 +1,8 @@
-import tilecache
-import tiledimage
 import logging
 import cv2
 import numpy as np
+from tiledimage import tilecache
+from tiledimage import tiledimage
 
 class CachedImage(tiledimage.TiledImage):
     def __init__(self, mode, dir="image.pngs", tilesize=128, cachesize=10, fileext="png", bgcolor=(0,0,0), hook=None):
