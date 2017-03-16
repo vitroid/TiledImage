@@ -5,15 +5,17 @@ from tiledimage import tilecache
 from tiledimage import tiledimage
 
 class CachedImage(tiledimage.TiledImage):
-    def __init__(self, mode, dir="image.pngs", tilesize=128, cachesize=10, fileext="png", bgcolor=(0,0,0), hook=None):
+    def __init__(self, mode, dir="image.pngs", tilesize=128, cachesize=10, fileext="png", bgcolor=(0,0,0), hook=None, disposal=False):
         """
         if mode == "new", flush the dir.
         hook is a function like put_image, that is called then a tile is rewritten.
+        dir will be removed when disposal is True.
         """
         logger = logging.getLogger()
         super(CachedImage, self).__init__(tilesize)
         self.fileext = fileext
         self.bgcolor = bgcolor
+        self.disposal = disposal
         if mode == "inherit":
             #read the info.txt in the dir.
             self.region = [None, None]
@@ -36,7 +38,7 @@ class CachedImage(tiledimage.TiledImage):
         #just for done()
         self.dir   = dir   
         
-    def done(self):
+    def write_info(self):
         """
         Call it explicitly.
         """
@@ -47,6 +49,17 @@ class CachedImage(tiledimage.TiledImage):
             file.write("{0} {1} {2} background\n".format(*self.bgcolor))   #0..255, black
             file.write("{0} filetype\n".format(self.fileext))       #image type by file extension
         self.tiles.done()
+
+    def __del__(self):
+        """
+        Destructor
+        """
+        if self.disposal:
+            rmdir(self.dir)
+        else:
+            self.write_info()
+            
+        
 
     def put_image(self, pos, img, linear_alpha=None):
         super(CachedImage, self).put_image(pos, img, linear_alpha)

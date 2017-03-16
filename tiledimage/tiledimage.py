@@ -71,9 +71,11 @@ class TiledImage():
                     t.append((tile, o))
         return t
 
-    def get_region(self, region):
+    def get_region(self, region=None):
         logger = logging.getLogger()
         #logger.debug("Get region {0} {1}".format(region,self.tiles))
+        if region is None:
+            region = self.region
         xrange, yrange = region
         image = np.zeros((yrange[1]-yrange[0], xrange[1] - xrange[0], 3), dtype=np.uint8)
         image[:,:] = self.bgcolor
@@ -129,11 +131,11 @@ class TiledImage():
         return self.get_region(self.region)
 
 def test():
-    image = TiledImage(tilesize=(8,24))
+    canvas = TiledImage(tilesize=(8,24))
     img = cv2.imread("sample.png")
-    image.put_image((-10,-10), img)
-    image.put_image((100,120), img)
-    c = image.get_image()
+    canvas.put_image((-10,-10), img)
+    canvas.put_image((100,120), img)
+    c = canvas.get_image()
     cv2.imshow("image",c)
     cv2.waitKey(0)
 
