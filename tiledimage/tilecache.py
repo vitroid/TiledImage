@@ -1,23 +1,34 @@
-import os
 import logging
+import os
 import shutil
 
-#external modules
+# external modules
 import cv2
-import pylru #"Least Recent Used" type cache
+import pylru  # "Least Recent Used" type cache
+
 
 def remove_folder(path):
     # check if folder exists
     if os.path.exists(path):
         # remove if exists
         shutil.rmtree(path)
-    
-class TileCache():
+
+
+class TileCache:
     """
     A tile of images that are mostly stored in files
     It does not care the integrity of the image.
     """
-    def __init__(self, mode, dir="tileimage", cachesize=10, default=None, fileext="png", hook=None):
+
+    def __init__(
+        self,
+        mode,
+        dir="tileimage",
+        cachesize=10,
+        default=None,
+        fileext="png",
+        hook=None,
+    ):
         """
         Hook is a function like put_image, that is called when a tile is rewritten
         """
@@ -34,10 +45,10 @@ class TileCache():
 
     def set_hook(self, hook):
         self.hook = hook
-        
+
     def key_to_filename(self, key):
         return "{0}/{1},{2}.{3}".format(self.dir, *key, self.fileext)
-    
+
     def __getitem__(self, key):
         logger = logging.getLogger()
         logger.debug("getitem key:{0}".format(key))
@@ -49,9 +60,9 @@ class TileCache():
             if os.path.exists(filename):
                 value = cv2.imread(filename)
                 self.nmiss += 1
-                #logger.info("cache miss key:{0}".format(key))
+                # logger.info("cache miss key:{0}".format(key))
             else:
-                #first access is not a "miss"
+                # first access is not a "miss"
                 logger.info("blank key:{0}".format(key))
                 value = self.default
             self.cache[key] = [False, value]
@@ -61,33 +72,33 @@ class TileCache():
         logger = logging.getLogger()
         logger.debug("update key:{0}".format(key))
         self.cache[key] = [True, value]
-            
+
     def writeback(self, key, value):
         """
         write back when it is purged from cache
         """
         logger = logging.getLogger()
         if value[0]:
-            #logger.info("purge key:{0}".format(key))
+            # logger.info("purge key:{0}".format(key))
             filename = self.key_to_filename(key)
             cv2.imwrite(filename, value[1])
             if self.hook is not None:
                 self.hook(key, value[1])
-        
+
     def __contains__(self, key):
-        #logger = logging.getLogger()
-        #logger.debug("Query: {0}".format(key))
+        # logger = logging.getLogger()
+        # logger.debug("Query: {0}".format(key))
         if key in self.cache:
-            #logger.debug("On cache: {0}".format(key))
+            # logger.debug("On cache: {0}".format(key))
             return True
         filename = self.key_to_filename(key)
-        #logger.debug("On file: {0}".format(filename))
+        # logger.debug("On file: {0}".format(filename))
         return os.path.exists(filename)
-        
+
     def done(self):
-        #purge the cached images to disk
+        # purge the cached images to disk
         for k in self.cache:
-            self.writeback(k, self.cache.peek(k))  #peek do not affect the order
+            self.writeback(k, self.cache.peek(k))  # peek do not affect the order
 
     def cachemiss(self):
         """
@@ -100,7 +111,7 @@ class TileCache():
         Automatically optimize the cache size
         Should not be adjusted in the final merging process
         """
-        percent = self.nmiss*100//self.nget
+        percent = self.nmiss * 100 // self.nget
         if percent > 50:
             self.cache.addTailNode(10)
         elif percent > 20:
