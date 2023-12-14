@@ -13,7 +13,7 @@ pypi:
 	./setup.py check
 	./setup.py sdist bdist_wheel upload
 test:
-	2pngs sample.png sample.pngs
+	2pngs sample.png sample.pngs 39
 	pngs2 sample.pngs sample.jpg
 distclean:
 	-rm *.scad *.yap @*

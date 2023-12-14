@@ -7,3 +7,4 @@ build/*
 dist/*
 *.egg*
 README\.rst
+Pipfile.lock
