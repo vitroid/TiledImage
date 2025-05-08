@@ -1,12 +1,13 @@
-from logging import getLogger
+from logging import getLogger, basicConfig, DEBUG, INFO
 
-# import cv2
+import json
 import numpy as np
 
-from tiledimage import tilecache, tiledimage
+from tiledimage.tiledimage import TiledImage
+import tiledimage.tilecache as tilecache
 
 
-class CachedImage(tiledimage.TiledImage):
+class CachedImage(TiledImage):
     def __init__(
         self,
         mode,
@@ -28,15 +29,18 @@ class CachedImage(tiledimage.TiledImage):
         self.fileext = fileext
         self.bgcolor = bgcolor
         self.disposal = disposal
+        self.dir = dir
+        self.modified = False
         if mode == "inherit":
             # read the info.txt in the dir.
             self.region = [None, None]
-            with open(dir + "/info.txt", "r") as file:
-                self.region[0] = [int(x) for x in file.readline().split()[:2]]
-                self.region[1] = [int(x) for x in file.readline().split()[:2]]
-                self.tilesize = [int(x) for x in file.readline().split()[:2]]
-                self.bgcolor = [int(x) for x in file.readline().split()[:3]]
-                self.fileext = file.readline().split()[0]
+            with open(f"{dir}/info.json", "r") as file:
+                info = json.load(file)
+                self.region[0] = info["xrange"]
+                self.region[1] = info["yrange"]
+                self.tilesize = info["tilesize"]
+                self.bgcolor = info["bgcolor"]
+                self.fileext = info["filetype"]
         defaulttile = np.zeros((self.tilesize[1], self.tilesize[0], 3), dtype=np.uint8)
         self.bgcolor = np.array(self.bgcolor)
         # logger.info("Color: {0}".format(self.bgcolor))
@@ -53,33 +57,36 @@ class CachedImage(tiledimage.TiledImage):
         # just for done()
         self.dir = dir
 
-    def write_info(self):
-        """
-        Call it explicitly.
-        """
-        with open(self.dir + "/info.txt", "w") as file:
-            file.write("{0} {1} xrange\n".format(*self.region[0]))
-            file.write("{0} {1} yrange\n".format(*self.region[1]))
-            file.write("{0} {1} tilesize\n".format(*self.tilesize))
-            file.write(
-                "{0} {1} {2} background\n".format(*self.bgcolor)
-            )  # 0..255, black
-            file.write(
-                "{0} filetype\n".format(self.fileext)
-            )  # image type by file extension
-        self.tiles.done()
+    def __enter__(self):
+        return self
 
-    def __del__(self):
-        """
-        Destructor
-        """
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.modified:
+            self._write_info()
         if self.disposal:
             rmdir(self.dir)
-        else:
-            self.write_info()
+
+    def _write_info(self):
+        """
+        内部実装用：情報をJSONファイルに書き出す
+        """
+        bgcolor = self.bgcolor
+        if isinstance(bgcolor, np.ndarray):
+            bgcolor = bgcolor.tolist()
+        info = dict(
+            xrange=self.region[0],
+            yrange=self.region[1],
+            tilesize=self.tilesize,
+            bgcolor=bgcolor,
+            filetype=self.fileext,
+        )
+        with open(f"{self.dir}/info.json", "w") as file:
+            json.dump(info, file)
+        self.tiles.done()  # タイルキャッシュの終了処理を呼び出す
 
     def put_image(self, pos, img, linear_alpha=None):
         super(CachedImage, self).put_image(pos, img, linear_alpha)
+        self.modified = True
         logger = getLogger()
         nmiss, naccess, cachesize = self.tiles.cachemiss()
         logger.info(
@@ -89,32 +96,3 @@ class CachedImage(tiledimage.TiledImage):
 
     def set_hook(self, hook):
         self.tiles.set_hook(hook)
-
-
-# def test():
-#     debug = True
-#     if debug:
-#         logging.basicConfig(level=logging.DEBUG,
-#                             #filename='log.txt',
-#                             format="%(asctime)s %(levelname)s %(message)s")
-#     else:
-#         logging.basicConfig(level=logging.INFO,
-#                             format="%(asctime)s %(levelname)s %(message)s")
-#     image = CachedImage("new", tilesize=(64,64), cachesize=10, bgcolor=(100,200,0), fileext="jpg")
-#     img = cv2.imread("sample.png")
-#     image.put_image((-10,-10), img)
-#     image.put_image((100,120), img)
-#     logger = logging.getLogger()
-#     logger.debug("start showing.")
-#     c = image.get_image()
-#     cv2.imshow("image",c)
-#     cv2.waitKey(0)
-#     image.done()
-#     image = CachedImage("inherit", cachesize=100)
-#     c = image.get_image()
-#     cv2.imshow("image",c)
-#     cv2.waitKey(0)
-#     image.done()
-
-# if __name__ == "__main__":
-#     test()
