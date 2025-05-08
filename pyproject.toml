@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "tiledimage"
+version = "0.3"
+description = "tools for tiled image that can be cached on a filesystem."
+authors = ["vitroid <vitroid@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pylru = "^1.2.1"
+opencv-python-headless = "^4.11.0.86"
+
+[tool.poetry.scripts]
+pngs2 = "tiledimage.pngs2:main"
+2pngs = "tiledimage.2pngs:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
