@@ -16,9 +16,10 @@ def main():
     if len(sys.argv) == 4:
         tilesize = int(sys.argv[3])
     image = cv2.imread(sys.argv[1])
-    cimage = ci.CachedImage("new", dir=sys.argv[2], tilesize=(tilesize, tilesize))
-    cimage.put_image((0, 0), image)
-    # cimage.done()
+    with ci.CachedImage(
+        "new", dir=sys.argv[2], tilesize=(tilesize, tilesize)
+    ) as cimage:
+        cimage.put_image((0, 0), image)
 
 
 if __name__ == "__main__":

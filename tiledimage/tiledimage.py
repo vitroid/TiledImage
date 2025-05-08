@@ -1,7 +1,6 @@
 import logging
 
 # external modules
-# import cv2
 import numpy as np
 
 # a range is always spacified with the min and max=min+width
@@ -53,6 +52,12 @@ class TiledImage:
             self.tilesize = tilesize
         self.region = None
         self.bgcolor = np.array(bgcolor)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass  # TiledImageは特別なクリーンアップ処理は必要ありません
 
     def tiles_containing(self, region, includeempty=False):
         """
@@ -170,16 +175,3 @@ class TiledImage:
 
     def get_image(self):
         return self.get_region(self.region)
-
-
-# def test():
-#     canvas = TiledImage(tilesize=(8,24))
-#     img = cv2.imread("sample.png")
-#     canvas.put_image((-10,-10), img)
-#     canvas.put_image((100,120), img)
-#     c = canvas.get_image()
-#     cv2.imshow("image",c)
-#     cv2.waitKey(0)
-
-# if __name__ == "__main__":
-#     test()
