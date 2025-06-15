@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tiledimage"
-version = "0.3"
+version = "0.4.0"
 description = "tools for tiled image that can be cached on a filesystem."
 authors = ["vitroid <vitroid@gmail.com>"]
 license = "MIT"

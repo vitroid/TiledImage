@@ -8,3 +8,4 @@ dist/*
 *.egg*
 README\.rst
 Pipfile.lock
+poetry.lock

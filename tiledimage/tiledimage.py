@@ -2,38 +2,7 @@ import logging
 
 # external modules
 import numpy as np
-
-# a range is always spacified with the min and max=min+width
-# 2d region consists of two ranges.
-
-
-def overlap(r1, r2):
-    """
-    True if the give regions (1D) overlap
-
-    there are 6 possible orders
-    ( ) [ ] x
-    ( [ ) ] o
-    ( [ ] ) o
-    [ ( ) ] o
-    [ ( ] ) o
-    [ ] ( ) x
-    ! { ) [ | ] ( }
-    ie [ ) && ( ]
-    """
-    if r1[0] < r2[1] and r2[0] < r1[1]:
-        return max(r1[0], r2[0]), min(r1[1], r2[1])
-    return None
-
-
-# It should also return the overlapping region
-def overlap2D(r1, r2):
-    x = overlap(r1[0], r2[0])
-    if x is not None:
-        y = overlap(r1[1], r2[1])
-        if y is not None:
-            return x, y
-    return None
+from tiledimage import Rect, Range
 
 
 class TiledImage:
@@ -59,55 +28,58 @@ class TiledImage:
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass  # TiledImageは特別なクリーンアップ処理は必要ありません
 
-    def tiles_containing(self, region, includeempty=False):
+    def tiles_containing(self, region: Rect, includeempty=False):
         """
         return the tiles containing the given region
         """
         logger = logging.getLogger()
         t = []
-        xran, yran = region
         xran = (
-            xran[0] // self.tilesize[0],
-            (xran[1] + self.tilesize[0] - 1) // self.tilesize[0],
+            region.x_range.min_val // self.tilesize[0],
+            (region.x_range.max_val + self.tilesize[0] - 1) // self.tilesize[0],
         )
         yran = (
-            yran[0] // self.tilesize[1],
-            (yran[1] + self.tilesize[1] - 1) // self.tilesize[1],
+            region.y_range.min_val // self.tilesize[1],
+            (region.y_range.max_val + self.tilesize[1] - 1) // self.tilesize[1],
         )
         for ix in range(xran[0], xran[1]):
             for iy in range(yran[0], yran[1]):
                 tile = (ix * self.tilesize[0], iy * self.tilesize[1])
                 logger.debug("Tile: {0}".format(tile))
                 if (tile in self.tiles) or includeempty:
-                    tregion = (
-                        (tile[0], tile[0] + self.tilesize[0]),
-                        (tile[1], tile[1] + self.tilesize[1]),
+                    tregion = Rect.from_coords(
+                        tile[0],
+                        tile[0] + self.tilesize[0],
+                        tile[1],
+                        tile[1] + self.tilesize[1],
                     )
-                    o = overlap2D(tregion, region)
+                    o = tregion & region
                     t.append((tile, o))
         return t
 
-    def get_region(self, region=None):
+    def get_region(self, region: Rect | None = None):
         logger = logging.getLogger()
-        # logger.debug("Get region {0} {1}".format(region,self.tiles))
         if region is None:
             region = self.region
-        xrange, yrange = region
         image = np.zeros(
-            (yrange[1] - yrange[0], xrange[1] - xrange[0], 3), dtype=np.uint8
+            (region.y_range.width, region.x_range.width, 3), dtype=np.uint8
         )
         image[:, :] = self.bgcolor
         for tile, overlap in self.tiles_containing(region):
-            # logger.debug("Should get a tile at {0} {1}".format(tile,self.tiles))
+            if overlap is None:
+                continue
             src = self.tiles[tile]
             originx, originy = tile
-            xr, yr = overlap
             image[
-                yr[0] - yrange[0] : yr[1] - yrange[0],
-                xr[0] - xrange[0] : xr[1] - xrange[0],
-                :,
+                overlap.y_range.min_val
+                - region.y_range.min_val : overlap.y_range.max_val
+                - region.y_range.min_val,
+                overlap.x_range.min_val
+                - region.x_range.min_val : overlap.x_range.max_val
+                - region.x_range.min_val,
             ] = src[
-                yr[0] - originy : yr[1] - originy, xr[0] - originx : xr[1] - originx, :
+                overlap.y_range.min_val - originy : overlap.y_range.max_val - originy,
+                overlap.x_range.min_val - originx : overlap.x_range.max_val - originx,
             ]
         return image
 
@@ -119,9 +91,12 @@ class TiledImage:
         otherwise, a different algorithm is required.
         """
         h, w = image.shape[:2]
-        xrange, yrange = (position[0], position[0] + w), (position[1], position[1] + h)
-        region = (xrange, yrange)
+        region = Rect.from_coords(
+            position[0], position[0] + w, position[1], position[1] + h
+        )
         for tile, overlap in self.tiles_containing(region, includeempty=True):
+            if overlap is None:
+                continue
             if tile not in self.tiles:
                 self.tiles[tile] = np.zeros(
                     (self.tilesize[1], self.tilesize[0], 3), dtype=np.uint8
@@ -129,26 +104,32 @@ class TiledImage:
                 self.tiles[tile][:, :] = self.bgcolor
             src = self.tiles[tile]
             originx, originy = tile
-            xr, yr = overlap
+
             if linear_alpha is None:
                 src[
-                    yr[0] - originy : yr[1] - originy,
-                    xr[0] - originx : xr[1] - originx,
-                    :,
+                    overlap.y_range.min_val
+                    - originy : overlap.y_range.max_val
+                    - originy,
+                    overlap.x_range.min_val
+                    - originx : overlap.x_range.max_val
+                    - originx,
                 ] = image[
-                    yr[0] - yrange[0] : yr[1] - yrange[0],
-                    xr[0] - xrange[0] : xr[1] - xrange[0],
-                    :,
+                    overlap.y_range.min_val
+                    - region.y_range.min_val : overlap.y_range.max_val
+                    - region.y_range.min_val,
+                    overlap.x_range.min_val
+                    - region.x_range.min_val : overlap.x_range.max_val
+                    - region.x_range.min_val,
                 ]
             else:
-                dy0 = yr[0] - originy
-                dy1 = yr[1] - originy
-                dx0 = xr[0] - originx
-                dx1 = xr[1] - originx
-                sx0 = xr[0] - xrange[0]
-                sx1 = xr[1] - xrange[0]
-                sy0 = yr[0] - yrange[0]
-                sy1 = yr[1] - yrange[0]
+                dy0 = overlap.y_range.min_val - originy
+                dy1 = overlap.y_range.max_val - originy
+                dx0 = overlap.x_range.min_val - originx
+                dx1 = overlap.x_range.max_val - originx
+                sx0 = overlap.x_range.min_val - region.x_range.min_val
+                sx1 = overlap.x_range.max_val - region.x_range.min_val
+                sy0 = overlap.y_range.min_val - region.y_range.min_val
+                sy1 = overlap.y_range.max_val - region.y_range.min_val
                 src[dy0:dy1, dx0:dx1, :] = (
                     linear_alpha[sx0:sx1, :] * image[sy0:sy1, sx0:sx1, :]
                     + (1 - linear_alpha[sx0:sx1, :]) * src[dy0:dy1, dx0:dx1, :]
@@ -157,21 +138,33 @@ class TiledImage:
             # rewrite the item explicitly (for caching)
             self.tiles[tile] = src
         if self.region is None:
-            self.region = (
-                (position[0], position[0] + w),
-                (position[1], position[1] + h),
-            )
+            self.region = region
         else:
-            self.region = (
-                (
-                    min(self.region[0][0], position[0]),
-                    max(self.region[0][1], position[0] + w),
-                ),
-                (
-                    min(self.region[1][0], position[1]),
-                    max(self.region[1][1], position[1] + h),
-                ),
+            self.region = Rect.from_coords(
+                min(self.region.x_range.min_val, region.x_range.min_val),
+                max(self.region.x_range.max_val, region.x_range.max_val),
+                min(self.region.y_range.min_val, region.y_range.min_val),
+                max(self.region.y_range.max_val, region.y_range.max_val),
             )
 
     def get_image(self):
         return self.get_region(self.region)
+
+
+def test():
+    import sys
+    import cv2
+
+    png = sys.argv[1]
+    tilesize = int(sys.argv[2])
+    with TiledImage(tilesize=tilesize) as cimage:
+        cimage.put_image((20, 40), cv2.imread(png))
+        cimage.put_image((10, 20), cv2.imread(png))
+        image = cimage.get_image()
+        cv2.imshow("image", image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    test()

@@ -5,6 +5,7 @@ import numpy as np
 
 from tiledimage.tiledimage import TiledImage
 import tiledimage.tilecache as tilecache
+from tiledimage import Rect
 
 
 class CachedImage(TiledImage):
@@ -74,8 +75,8 @@ class CachedImage(TiledImage):
         if isinstance(bgcolor, np.ndarray):
             bgcolor = bgcolor.tolist()
         info = dict(
-            xrange=self.region[0],
-            yrange=self.region[1],
+            xrange=self.region.x_range.as_list(),
+            yrange=self.region.y_range.as_list(),
             tilesize=self.tilesize,
             bgcolor=bgcolor,
             filetype=self.fileext,
@@ -96,3 +97,22 @@ class CachedImage(TiledImage):
 
     def set_hook(self, hook):
         self.tiles.set_hook(hook)
+
+
+def test():
+    import sys
+    import cv2
+
+    png = sys.argv[1]
+    tilesize = int(sys.argv[2])
+    with CachedImage("new", tilesize=tilesize) as cimage:
+        cimage.put_image((10, 20), cv2.imread(png))
+        cimage.put_image((0, 0), cv2.imread(png))
+        image = cimage.get_image()
+        cv2.imshow("image", image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    test()

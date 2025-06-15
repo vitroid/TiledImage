@@ -2,6 +2,9 @@
 PKGNAME = tiledimage
 PYTHON = python3
 POETRY = poetry
+GIT = git
+# バージョン番号を取得
+VERSION := $(shell poetry version -s)
 
 # デフォルトターゲット
 .PHONY: all
@@ -10,8 +13,8 @@ all: build
 # テスト関連
 .PHONY: test test-deploy test-install
 test:
-	$(PYTHON) 2pngs.py sample.png sample.pngs 39
-	$(PYTHON) pngs2.py sample.pngs sample.jpg
+	$(PYTHON) -m tiledimage.tiledimage sample.png 39
+	$(PYTHON) -m tiledimage.cachedimage sample.png 39
 
 test-deploy:
 	$(POETRY) publish --build -r testpypi
@@ -29,8 +32,12 @@ uninstall:
 build: README.md
 	$(POETRY) build
 
-deploy: clean
+tag:
+	$(GIT) tag -a v$(VERSION) -m "Release version $(VERSION)"
+
+deploy: build tag
 	$(POETRY) publish --build
+	$(GIT) push origin v$(VERSION)
 
 check:
 	$(POETRY) check

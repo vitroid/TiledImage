@@ -47,11 +47,11 @@ class TileCache:
         self.hook = hook
 
     def key_to_filename(self, key):
-        return "{0}/{1},{2}.{3}".format(self.dir, *key, self.fileext)
+        return f"{self.dir}/{key[0]},{key[1]}.{self.fileext}"
 
     def __getitem__(self, key):
         logger = logging.getLogger()
-        logger.debug("getitem key:{0}".format(key))
+        logger.debug(f"getitem key:{key}")
         self.nget += 1
         try:
             modified, value = self.cache[key]
@@ -60,17 +60,15 @@ class TileCache:
             if os.path.exists(filename):
                 value = cv2.imread(filename)
                 self.nmiss += 1
-                # logger.info("cache miss key:{0}".format(key))
             else:
-                # first access is not a "miss"
-                logger.info("blank key:{0}".format(key))
+                logger.info(f"blank key:{key}")
                 value = self.default
             self.cache[key] = [False, value]
         return value
 
     def __setitem__(self, key, value):
         logger = logging.getLogger()
-        logger.debug("update key:{0}".format(key))
+        logger.debug(f"update key:{key}")
         self.cache[key] = [True, value]
 
     def writeback(self, key, value):
@@ -79,20 +77,15 @@ class TileCache:
         """
         logger = logging.getLogger()
         if value[0]:
-            # logger.info("purge key:{0}".format(key))
             filename = self.key_to_filename(key)
             cv2.imwrite(filename, value[1])
             if self.hook is not None:
                 self.hook(key, value[1])
 
     def __contains__(self, key):
-        # logger = logging.getLogger()
-        # logger.debug("Query: {0}".format(key))
         if key in self.cache:
-            # logger.debug("On cache: {0}".format(key))
             return True
         filename = self.key_to_filename(key)
-        # logger.debug("On file: {0}".format(filename))
         return os.path.exists(filename)
 
     def done(self):
