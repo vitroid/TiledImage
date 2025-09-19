@@ -103,8 +103,8 @@ class CachedImage(TiledImage):
         if isinstance(bgcolor, np.ndarray):
             bgcolor = bgcolor.tolist()
         info = dict(
-            xrange=self.region.x_range.as_list(),
-            yrange=self.region.y_range.as_list(),
+            xrange=self.rect.x_range.as_list(),
+            yrange=self.rect.y_range.as_list(),
             tilesize=self.tilesize,
             bgcolor=bgcolor,
             filetype=self.fileext,
