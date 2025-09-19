@@ -131,6 +131,25 @@ class Rect:
         """
         return self.get_overlap(other)
 
+    def __or__(self, other: "Rect") -> "Rect | None":
+        """&演算子で領域の包含を取得する
+
+        Example:
+            a1 = Area.from_coords(0, 10, 0, 10)
+            a2 = Area.from_coords(5, 15, 5, 15)
+            overlap = a1 & a2  # Area(Range(0, 15), Range(0, 15))
+        """
+        return Rect(
+            x_range=Range(
+                min_val=min(self.left, other.left),
+                max_val=max(self.right, other.right),
+            ),
+            y_range=Range(
+                min_val=min(self.top, other.top),
+                max_val=max(self.bottom, other.bottom),
+            ),
+        )
+
     def trim(self, image_shape: tuple[int, int]):
         """
         画像の範囲を超える領域をtrimする。
