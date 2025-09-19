@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import sys
-
 import cv2
-
 import tiledimage.cachedimage as ci
 
 

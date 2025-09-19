@@ -106,41 +106,63 @@ class TiledImage:
                     t.append((tile, o))
         return t
 
-    def get_region(self, region: Rect | None = None):
+    def get_region(self, rect: Rect | None = None, width: int = 0):
         logger = logging.getLogger()
-        if region is None:
-            region = self.region
-        logger.debug(f"get_region region:{region}")
-        # region.x_rangeが0:や:infの場合には、それぞれself.regionのx_rangeを使用する
-        if region.x_range.min_val == 0:
-            region.x_range.min_val = self.region.x_range.min_val
-        if region.x_range.max_val == float("inf"):
-            region.x_range.max_val = self.region.x_range.max_val
-        if region.y_range.min_val == 0:
-            region.y_range.min_val = self.region.y_range.min_val
-        if region.y_range.max_val == float("inf"):
-            region.y_range.max_val = self.region.y_range.max_val
+        if rect is None:
+            rect = self.region
+        logger.debug(f"get_region region:{rect}")
+        # # region.x_rangeが0:や:infの場合には、それぞれself.regionのx_rangeを使用する
+        # if region.x_range.min_val == 0:
+        #     region.x_range.min_val = self.region.x_range.min_val
+        # if region.x_range.max_val == float("inf"):
+        #     region.x_range.max_val = self.region.x_range.max_val
+        # if region.y_range.min_val == 0:
+        #     region.y_range.min_val = self.region.y_range.min_val
+        # if region.y_range.max_val == float("inf"):
+        #     region.y_range.max_val = self.region.y_range.max_val
 
-        image = np.zeros(
-            (region.y_range.width, region.x_range.width, 3), dtype=np.uint8
-        )
+        if width:
+            dst_width = width
+            dst_height = width * rect.height / rect.width
+            scale = width / rect.width
+        else:
+            dst_width = rect.width
+            dst_height = rect.height
+            scale = 1.0
+
+        image = np.zeros((dst_height, dst_width, 3), dtype=np.uint8)
         image[:, :] = self.bgcolor
-        for tile, overlap in self.tiles_containing(region):
+        for tile, overlap in self.tiles_containing(rect):
             if overlap is None:
                 continue
             src = self.tiles[tile]
-            originx, originy = tile
-            image[
-                overlap.y_range.min_val
-                - region.y_range.min_val : overlap.y_range.max_val
-                - region.y_range.min_val,
-                overlap.x_range.min_val
-                - region.x_range.min_val : overlap.x_range.max_val
-                - region.x_range.min_val,
-            ] = src[
-                overlap.y_range.min_val - originy : overlap.y_range.max_val - originy,
-                overlap.x_range.min_val - originx : overlap.x_range.max_val - originx,
-            ]
+            originx, originy = int(tile[0] * scale), int(tile[1] * scale)
+            src_top = overlap.top - originy
+            src_bottom = overlap.bottom - originy
+            src_left = overlap.left - originx
+            src_right = overlap.right - originx
+            src_image = src[src_top:src_bottom, src_left:src_right]
+            src_image = cv2.resize(src_image, (dst_width, dst_height))
+
+            dst_top = int((overlap.top - rect.top) * scale)
+            dst_bottom = int((overlap.bottom - rect.top) * scale)
+            dst_left = int((overlap.left - rect.left) * scale)
+            dst_right = int((overlap.right - rect.left) * scale)
+            image[dst_top:dst_bottom, dst_left:dst_right] = src_image
+            # dst_bottom = overlap.bottom-rect.top
+            # dst_left = overlap.left-rect.left
+            # dst_right = overlap.right-rect.left
+            # image[
+            #     overlap.y_range.min_val
+            #     - rect.y_range.min_val : overlap.y_range.max_val
+            #     - rect.y_range.min_val,
+            #     overlap.x_range.min_val
+            #     - rect.x_range.min_val : overlap.x_range.max_val
+            #     - rect.x_range.min_val,
+            # ] = src[
+            #     overlap.y_range.min_val - originy : overlap.y_range.max_val - originy,
+            #     overlap.x_range.min_val - originx : overlap.x_range.max_val - originx,
+            # ]
         return image
 
     def put_image(self, position, image, linear_alpha=None):
@@ -208,8 +230,9 @@ class TiledImage:
                 max(self.region.y_range.max_val, region.y_range.max_val),
             )
 
-    def get_image(self):
-        return self.get_region(self.region)
+    def get_image(self, width: int = 0):
+        # widthを指定すると縮小する。
+        return self.get_region(self.region, width)
 
 
 def test():
