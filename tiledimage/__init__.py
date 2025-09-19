@@ -151,3 +151,7 @@ class Rect:
             self.width,
             self.height,
         )
+
+    def validate(self, min_size: tuple[int, int] = (0, 0)):
+        self.x_range.validate(min_size[0])
+        self.y_range.validate(min_size[1])
