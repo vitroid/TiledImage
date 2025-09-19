@@ -3,6 +3,7 @@ import logging
 # external modules
 import numpy as np
 from tiledimage import Rect, Range
+import cv2
 
 
 class TiledImage:
@@ -19,7 +20,7 @@ class TiledImage:
         else:
             assert type(tilesize) is tuple
             self.tilesize = tilesize
-        self.region = None
+        self.rect = None
         self.bgcolor = np.array(bgcolor)
 
     def __enter__(self):
@@ -77,19 +78,19 @@ class TiledImage:
         region = self._parse_slice(key)
         self.put_image((region.x_range.min_val, region.y_range.min_val), value)
 
-    def tiles_containing(self, region: Rect, includeempty=False):
+    def tiles_containing(self, rect: Rect, includeempty=False):
         """
         return the tiles containing the given region
         """
         logger = logging.getLogger()
         t = []
         xran = (
-            region.x_range.min_val // self.tilesize[0],
-            (region.x_range.max_val + self.tilesize[0] - 1) // self.tilesize[0],
+            rect.x_range.min_val // self.tilesize[0],
+            (rect.x_range.max_val + self.tilesize[0] - 1) // self.tilesize[0],
         )
         yran = (
-            region.y_range.min_val // self.tilesize[1],
-            (region.y_range.max_val + self.tilesize[1] - 1) // self.tilesize[1],
+            rect.y_range.min_val // self.tilesize[1],
+            (rect.y_range.max_val + self.tilesize[1] - 1) // self.tilesize[1],
         )
         for ix in range(xran[0], xran[1]):
             for iy in range(yran[0], yran[1]):
@@ -102,14 +103,14 @@ class TiledImage:
                         tile[1],
                         tile[1] + self.tilesize[1],
                     )
-                    o = tregion & region
+                    o = tregion & rect
                     t.append((tile, o))
         return t
 
     def get_region(self, rect: Rect | None = None, width: int = 0):
         logger = logging.getLogger()
         if rect is None:
-            rect = self.region
+            rect = self.rect
         logger.debug(f"get_region region:{rect}")
         # # region.x_rangeが0:や:infの場合には、それぞれself.regionのx_rangeを使用する
         # if region.x_range.min_val == 0:
@@ -189,29 +190,21 @@ class TiledImage:
 
             if linear_alpha is None:
                 src[
-                    overlap.y_range.min_val
-                    - originy : overlap.y_range.max_val
-                    - originy,
-                    overlap.x_range.min_val
-                    - originx : overlap.x_range.max_val
-                    - originx,
+                    overlap.top - originy : overlap.bottom - originy,
+                    overlap.left - originx : overlap.right - originx,
                 ] = image[
-                    overlap.y_range.min_val
-                    - region.y_range.min_val : overlap.y_range.max_val
-                    - region.y_range.min_val,
-                    overlap.x_range.min_val
-                    - region.x_range.min_val : overlap.x_range.max_val
-                    - region.x_range.min_val,
+                    overlap.top - region.top : overlap.bottom - region.top,
+                    overlap.left - region.left : overlap.right - region.left,
                 ]
             else:
-                dy0 = overlap.y_range.min_val - originy
-                dy1 = overlap.y_range.max_val - originy
-                dx0 = overlap.x_range.min_val - originx
-                dx1 = overlap.x_range.max_val - originx
-                sx0 = overlap.x_range.min_val - region.x_range.min_val
-                sx1 = overlap.x_range.max_val - region.x_range.min_val
-                sy0 = overlap.y_range.min_val - region.y_range.min_val
-                sy1 = overlap.y_range.max_val - region.y_range.min_val
+                dy0 = overlap.top - originy
+                dy1 = overlap.bottom - originy
+                dx0 = overlap.left - originx
+                dx1 = overlap.right - originx
+                sx0 = overlap.left - region.left
+                sx1 = overlap.right - region.left
+                sy0 = overlap.top - region.top
+                sy1 = overlap.bottom - region.top
                 alpha = linear_alpha[np.newaxis, :, np.newaxis]
                 src[dy0:dy1, dx0:dx1, :] = (
                     alpha[:, sx0:sx1, :] * image[sy0:sy1, sx0:sx1, :]
@@ -220,19 +213,19 @@ class TiledImage:
 
             # rewrite the item explicitly (for caching)
             self.tiles[tile] = src
-        if self.region is None:
-            self.region = region
+        if self.rect is None:
+            self.rect = region
         else:
-            self.region = Rect.from_coords(
-                min(self.region.x_range.min_val, region.x_range.min_val),
-                max(self.region.x_range.max_val, region.x_range.max_val),
-                min(self.region.y_range.min_val, region.y_range.min_val),
-                max(self.region.y_range.max_val, region.y_range.max_val),
+            self.rect = Rect.from_coords(
+                min(self.rect.left, region.left),
+                max(self.rect.right, region.right),
+                min(self.rect.top, region.top),
+                max(self.rect.bottom, region.bottom),
             )
 
     def get_image(self, width: int = 0):
         # widthを指定すると縮小する。
-        return self.get_region(self.region, width)
+        return self.get_region(self.rect, width)
 
 
 def test():
