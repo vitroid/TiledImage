@@ -5,7 +5,7 @@ import numpy as np
 
 from tiledimage.tiledimage import TiledImage
 import tiledimage.tilecache as tilecache
-from . import Rect, Range
+from tiledimage import Rect, Range
 
 
 class CachedImage(TiledImage):
