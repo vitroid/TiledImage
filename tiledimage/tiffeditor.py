@@ -7,9 +7,12 @@ import tifffile
 import rasterio
 from rasterio.windows import Window
 from rasterio import Affine
+
+
 @dataclass
 class Range:
     """数値の範囲を表現するクラス"""
+
     min_val: int
     max_val: int
 
@@ -22,6 +25,7 @@ class Range:
 @dataclass
 class Rect:
     """2次元の領域を表現するクラス"""
+
     x_range: Range
     y_range: Range
 
@@ -409,46 +413,46 @@ def test():
 
     png = sys.argv[1]
     tilesize = int(sys.argv[2])
-    
+
     # 元画像を読み込んでサイズを取得
     original_image = cv2.imread(png)
     if original_image is None:
         print(f"エラー: 画像ファイル '{png}' が見つかりません")
         return
-    
+
     height, width, channels = original_image.shape
     print(f"元画像サイズ: {height}x{width}x{channels}")
-    
+
     # TIFFファイルを新規作成（十分な大きさで）
     tiff_height = height + 100  # 余裕を持たせる
     tiff_width = width + 100
-    
+
     with TiffEditor(
-        filepath=png + ".tiff", 
-        mode="r+", 
+        filepath=png + ".tiff",
+        mode="r+",
         tilesize=tilesize,
         shape=(tiff_height, tiff_width, channels),
         dtype=np.uint8,
-        create_if_not_exists=True
+        create_if_not_exists=True,
     ) as tiff_editor:
         print(f"TIFFファイル情報: {tiff_editor.get_info()}")
-        
+
         # BGRからRGBに変換
         rgb_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
-        
+
         # 画像を配置
-        tiff_editor[20:20+height, 40:40+width] = rgb_image
-        tiff_editor[10:10+height, 20:20+width] = rgb_image
-        
+        tiff_editor[20 : 20 + height, 40 : 40 + width] = rgb_image
+        tiff_editor[10 : 10 + height, 20 : 20 + width] = rgb_image
+
         # 結果を取得して表示
         result_image = tiff_editor[0:tiff_height, 0:tiff_width]
-        
+
         # RGBからBGRに戻して表示
         display_image = cv2.cvtColor(result_image, cv2.COLOR_RGB2BGR)
         cv2.imshow("TIFF Editor Result", display_image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
-        
+
         print(f"TIFFファイル '{png}.tiff' が作成されました")
 
 
