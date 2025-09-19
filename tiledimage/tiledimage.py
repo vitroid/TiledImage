@@ -123,8 +123,8 @@ class TiledImage:
             rect.y_range.max_val = self.rect.bottom
 
         if width:
-            dst_width = width
-            dst_height = width * rect.height // rect.width
+            dst_width = int(width)
+            dst_height = int(width * rect.height) // rect.width
             scale = width / rect.width
         else:
             dst_width = rect.width
