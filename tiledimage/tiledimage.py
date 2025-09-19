@@ -190,7 +190,7 @@ class TiledImage:
                 sx1 = overlap.x_range.max_val - region.x_range.min_val
                 sy0 = overlap.y_range.min_val - region.y_range.min_val
                 sy1 = overlap.y_range.max_val - region.y_range.min_val
-                if linear_alpha.rank == 1:
+                if linear_alpha.ndim == 1:
                     alpha = linear_alpha[np.newaxis, np.newaxis, :]
                 else:
                     alpha = linear_alpha
