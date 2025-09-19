@@ -110,3 +110,24 @@ class Rect:
             overlap = a1 & a2  # Area(Range(5, 10), Range(5, 10))
         """
         return self.get_overlap(other)
+
+    def trim_region(self, image_shape: tuple[int, int]) -> Rect:
+        """
+        画像の範囲を超える領域をtrimする。
+        """
+        top = max(0, self.y_range.min_val)
+        bottom = min(image_shape[0], self.y_range.max_val)
+        left = max(0, self.x_range.min_val)
+        right = min(image_shape[1], self.x_range.max_val)
+        return Rect(
+            x_range=Range(min_val=left, max_val=right),
+            y_range=Range(min_val=top, max_val=bottom),
+        )
+
+    def to_cvrect(self) -> tuple[int, int, int, int]:
+        return (
+            self.x_range.min_val,
+            self.y_range.min_val,
+            self.width,
+            self.height,
+        )
