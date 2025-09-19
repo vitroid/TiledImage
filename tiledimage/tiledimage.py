@@ -113,42 +113,46 @@ class TiledImage:
             rect = self.rect
         logger.debug(f"get_region region:{rect}")
         # # region.x_rangeが0:や:infの場合には、それぞれself.regionのx_rangeを使用する
-        # if region.x_range.min_val == 0:
-        #     region.x_range.min_val = self.region.x_range.min_val
-        # if region.x_range.max_val == float("inf"):
-        #     region.x_range.max_val = self.region.x_range.max_val
-        # if region.y_range.min_val == 0:
-        #     region.y_range.min_val = self.region.y_range.min_val
-        # if region.y_range.max_val == float("inf"):
-        #     region.y_range.max_val = self.region.y_range.max_val
+        if rect.left == 0:
+            rect.x_range.min_val = self.rect.left
+        if rect.right == float("inf"):
+            rect.x_range.max_val = self.rect.right
+        if rect.top == 0:
+            rect.y_range.min_val = self.rect.top
+        if rect.bottom == float("inf"):
+            rect.y_range.max_val = self.rect.bottom
 
         if width:
             dst_width = width
-            dst_height = width * rect.height / rect.width
+            dst_height = width * rect.height // rect.width
             scale = width / rect.width
         else:
             dst_width = rect.width
             dst_height = rect.height
             scale = 1.0
 
+        print(f"{width=}, {rect=},{dst_width=}, {dst_height=}, {scale=}")
         image = np.zeros((dst_height, dst_width, 3), dtype=np.uint8)
         image[:, :] = self.bgcolor
         for tile, overlap in self.tiles_containing(rect):
             if overlap is None:
                 continue
             src = self.tiles[tile]
-            originx, originy = int(tile[0] * scale), int(tile[1] * scale)
+            originx, originy = tile
             src_top = overlap.top - originy
             src_bottom = overlap.bottom - originy
             src_left = overlap.left - originx
             src_right = overlap.right - originx
             src_image = src[src_top:src_bottom, src_left:src_right]
-            src_image = cv2.resize(src_image, (dst_width, dst_height))
 
             dst_top = int((overlap.top - rect.top) * scale)
             dst_bottom = int((overlap.bottom - rect.top) * scale)
             dst_left = int((overlap.left - rect.left) * scale)
             dst_right = int((overlap.right - rect.left) * scale)
+
+            src_image = cv2.resize(
+                src_image, (dst_right - dst_left, dst_bottom - dst_top)
+            )
             image[dst_top:dst_bottom, dst_left:dst_right] = src_image
             # dst_bottom = overlap.bottom-rect.top
             # dst_left = overlap.left-rect.left
@@ -174,10 +178,16 @@ class TiledImage:
         otherwise, a different algorithm is required.
         """
         h, w = image.shape[:2]
-        region = Rect.from_coords(
+        rect = Rect.from_coords(
             position[0], position[0] + w, position[1], position[1] + h
         )
-        for tile, overlap in self.tiles_containing(region, includeempty=True):
+        # expand the canvas
+        if self.rect is None:
+            self.rect = rect
+        else:
+            self.rect |= rect
+        print(f"{rect=}, {self.rect=}")
+        for tile, overlap in self.tiles_containing(rect, includeempty=True):
             if overlap is None:
                 continue
             if tile not in self.tiles:
@@ -193,18 +203,18 @@ class TiledImage:
                     overlap.top - originy : overlap.bottom - originy,
                     overlap.left - originx : overlap.right - originx,
                 ] = image[
-                    overlap.top - region.top : overlap.bottom - region.top,
-                    overlap.left - region.left : overlap.right - region.left,
+                    overlap.top - rect.top : overlap.bottom - rect.top,
+                    overlap.left - rect.left : overlap.right - rect.left,
                 ]
             else:
                 dy0 = overlap.top - originy
                 dy1 = overlap.bottom - originy
                 dx0 = overlap.left - originx
                 dx1 = overlap.right - originx
-                sx0 = overlap.left - region.left
-                sx1 = overlap.right - region.left
-                sy0 = overlap.top - region.top
-                sy1 = overlap.bottom - region.top
+                sx0 = overlap.left - rect.left
+                sx1 = overlap.right - rect.left
+                sy0 = overlap.top - rect.top
+                sy1 = overlap.bottom - rect.top
                 alpha = linear_alpha[np.newaxis, :, np.newaxis]
                 src[dy0:dy1, dx0:dx1, :] = (
                     alpha[:, sx0:sx1, :] * image[sy0:sy1, sx0:sx1, :]
@@ -213,15 +223,6 @@ class TiledImage:
 
             # rewrite the item explicitly (for caching)
             self.tiles[tile] = src
-        if self.rect is None:
-            self.rect = region
-        else:
-            self.rect = Rect.from_coords(
-                min(self.rect.left, region.left),
-                max(self.rect.right, region.right),
-                min(self.rect.top, region.top),
-                max(self.rect.bottom, region.bottom),
-            )
 
     def get_image(self, width: int = 0):
         # widthを指定すると縮小する。
@@ -241,6 +242,7 @@ def test():
         tiled_image[20:, 40:] = cv2.imread(png)
         tiled_image[10:, 20:] = cv2.imread(png)
         image = tiled_image[:, :]
+        image = tiled_image.get_image(width=100)
         cv2.imshow("image", image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
