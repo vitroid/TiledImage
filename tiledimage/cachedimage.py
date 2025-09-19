@@ -34,11 +34,11 @@ class CachedImage(TiledImage):
         self.modified = False
         if mode == "inherit":
             # read the info.txt in the dir.
-            self.region = [None, None]
+            self.rect = None
             try:
                 with open(f"{dir}/info.json", "r") as file:
                     info = json.load(file)
-                    self.region = Rect(
+                    self.rect = Rect(
                         x_range=Range(
                             min_val=info["xrange"][0], max_val=info["xrange"][1]
                         ),
@@ -69,7 +69,7 @@ class CachedImage(TiledImage):
                             self.bgcolor = [int(cols[0]), int(cols[1]), int(cols[2])]
                         if cols[-1] == "filetype":
                             self.fileext = cols[-1]
-                self.region = Rect(x_range=xrange, y_range=yrange)
+                self.rect = Rect(x_range=xrange, y_range=yrange)
         defaulttile = np.zeros((self.tilesize[1], self.tilesize[0], 3), dtype=np.uint8)
         self.bgcolor = np.array(self.bgcolor)
         # logger.info("Color: {0}".format(self.bgcolor))
