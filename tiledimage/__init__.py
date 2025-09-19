@@ -87,6 +87,26 @@ class Rect:
         """領域の高さを返す"""
         return self.y_range.width
 
+    @property
+    def left(self) -> int:
+        """領域の左端を返す"""
+        return self.x_range.min_val
+
+    @property
+    def right(self) -> int:
+        """領域の右端を返す"""
+        return self.x_range.max_val
+
+    @property
+    def top(self) -> int:
+        """領域の上端を返す"""
+        return self.y_range.min_val
+
+    @property
+    def bottom(self) -> int:
+        """領域の下端を返す"""
+        return self.y_range.max_val
+
     def overlaps(self, other: "Rect") -> bool:
         """他の領域と重複があるかどうかを判定する"""
         return self.x_range.overlaps(other.x_range) and self.y_range.overlaps(
