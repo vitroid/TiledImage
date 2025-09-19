@@ -46,6 +46,12 @@ class Range:
         """範囲をリストに変換する"""
         return [self.min_val, self.max_val]
 
+    def validate(self, min_size: int = 0):
+        if self.min_val >= self.max_val:
+            raise ValueError("Invalid region")
+        if self.max_val - self.min_val < min_size:
+            raise ValueError("Region is too small")
+
 
 @dataclass
 class Rect:
