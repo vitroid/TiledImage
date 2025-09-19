@@ -111,7 +111,7 @@ class Rect:
         """
         return self.get_overlap(other)
 
-    def trim_region(self, image_shape: tuple[int, int]) -> Rect:
+    def trim(self, image_shape: tuple[int, int]) -> Rect:
         """
         画像の範囲を超える領域をtrimする。
         """
