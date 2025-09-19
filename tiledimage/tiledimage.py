@@ -138,6 +138,8 @@ class TiledImage:
             if overlap is None:
                 continue
             src = self.tiles[tile]
+            if src is None:
+                continue
             originx, originy = tile
             src_top = overlap.top - originy
             src_bottom = overlap.bottom - originy

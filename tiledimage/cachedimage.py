@@ -139,7 +139,7 @@ def test():
         image = tiled_image[:, :]
 
     with CachedImage("inherit", dir="image.pngs") as tiled_image:
-        cv2.imshow("image", tiled_image[:, :])
+        cv2.imshow("image", tiled_image.get_image(width=100))
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
