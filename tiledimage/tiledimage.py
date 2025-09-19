@@ -190,9 +190,13 @@ class TiledImage:
                 sx1 = overlap.x_range.max_val - region.x_range.min_val
                 sy0 = overlap.y_range.min_val - region.y_range.min_val
                 sy1 = overlap.y_range.max_val - region.y_range.min_val
+                if linear_alpha.rank == 1:
+                    alpha = linear_alpha[np.newaxis, np.newaxis, :]
+                else:
+                    alpha = linear_alpha
                 src[dy0:dy1, dx0:dx1, :] = (
-                    linear_alpha[sx0:sx1, :] * image[sy0:sy1, sx0:sx1, :]
-                    + (1 - linear_alpha[sx0:sx1, :]) * src[dy0:dy1, dx0:dx1, :]
+                    alpha[sx0:sx1, :] * image[sy0:sy1, sx0:sx1, :]
+                    + (1 - alpha[sx0:sx1, :]) * src[dy0:dy1, dx0:dx1, :]
                 )
 
             # rewrite the item explicitly (for caching)
