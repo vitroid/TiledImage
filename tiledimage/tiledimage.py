@@ -28,6 +28,55 @@ class TiledImage:
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass  # TiledImageは特別なクリーンアップ処理は必要ありません
 
+    def _parse_slice(self, key):
+        """スライスを解析してRectに変換する
+
+        Args:
+            key: スライスまたはタプル。例: (slice(0, 10), slice(0, 20))
+
+        Returns:
+            Rect: スライスに対応する領域
+        """
+        if not isinstance(key, tuple) or len(key) != 2:
+            raise IndexError("2次元のスライスを指定してください")
+
+        y_slice, x_slice = key
+        if not (isinstance(y_slice, slice) and isinstance(x_slice, slice)):
+            raise IndexError("スライスを指定してください")
+
+        # スライスの開始と終了を取得
+        y_start = y_slice.start if y_slice.start is not None else 0
+        y_stop = y_slice.stop if y_slice.stop is not None else float("inf")
+        x_start = x_slice.start if x_slice.start is not None else 0
+        x_stop = x_slice.stop if x_slice.stop is not None else float("inf")
+
+        # ステップは未対応
+        if y_slice.step is not None or x_slice.step is not None:
+            raise NotImplementedError("ステップ付きスライスには未対応です")
+
+        return Rect.from_coords(x_start, x_stop, y_start, y_stop)
+
+    def __getitem__(self, key):
+        """スライスで領域を取得する
+
+        Example:
+            image = tiled_image[10:20, 30:40]  # 10:20行、30:40列の領域を取得
+        """
+        region = self._parse_slice(key)
+        return self.get_region(region)
+
+    def __setitem__(self, key, value):
+        """スライスで領域を設定する
+
+        Example:
+            tiled_image[10:20, 30:40] = image  # 10:20行、30:40列の領域に画像を設定
+        """
+        if not isinstance(value, np.ndarray):
+            raise TypeError("NumPy配列を指定してください")
+
+        region = self._parse_slice(key)
+        self.put_image((region.x_range.min_val, region.y_range.min_val), value)
+
     def tiles_containing(self, region: Rect, includeempty=False):
         """
         return the tiles containing the given region
@@ -61,6 +110,17 @@ class TiledImage:
         logger = logging.getLogger()
         if region is None:
             region = self.region
+        logger.debug(f"get_region region:{region}")
+        # region.x_rangeが0:や:infの場合には、それぞれself.regionのx_rangeを使用する
+        if region.x_range.min_val == 0:
+            region.x_range.min_val = self.region.x_range.min_val
+        if region.x_range.max_val == float("inf"):
+            region.x_range.max_val = self.region.x_range.max_val
+        if region.y_range.min_val == 0:
+            region.y_range.min_val = self.region.y_range.min_val
+        if region.y_range.max_val == float("inf"):
+            region.y_range.max_val = self.region.y_range.max_val
+
         image = np.zeros(
             (region.y_range.width, region.x_range.width, 3), dtype=np.uint8
         )
@@ -154,13 +214,16 @@ class TiledImage:
 def test():
     import sys
     import cv2
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG)
 
     png = sys.argv[1]
     tilesize = int(sys.argv[2])
-    with TiledImage(tilesize=tilesize) as cimage:
-        cimage.put_image((20, 40), cv2.imread(png))
-        cimage.put_image((10, 20), cv2.imread(png))
-        image = cimage.get_image()
+    with TiledImage(tilesize=tilesize) as tiled_image:
+        tiled_image[20:, 40:] = cv2.imread(png)
+        tiled_image[10:, 20:] = cv2.imread(png)
+        image = tiled_image[:, :]
         cv2.imshow("image", image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()

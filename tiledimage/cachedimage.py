@@ -5,7 +5,7 @@ import numpy as np
 
 from tiledimage.tiledimage import TiledImage
 import tiledimage.tilecache as tilecache
-from tiledimage import Rect
+from tiledimage import Rect, Range
 
 
 class CachedImage(TiledImage):
@@ -35,13 +35,41 @@ class CachedImage(TiledImage):
         if mode == "inherit":
             # read the info.txt in the dir.
             self.region = [None, None]
-            with open(f"{dir}/info.json", "r") as file:
-                info = json.load(file)
-                self.region[0] = info["xrange"]
-                self.region[1] = info["yrange"]
-                self.tilesize = info["tilesize"]
-                self.bgcolor = info["bgcolor"]
-                self.fileext = info["filetype"]
+            try:
+                with open(f"{dir}/info.json", "r") as file:
+                    info = json.load(file)
+                    self.region = Rect(
+                        x_range=Range(
+                            min_val=info["xrange"][0], max_val=info["xrange"][1]
+                        ),
+                        y_range=Range(
+                            min_val=info["yrange"][0], max_val=info["yrange"][1]
+                        ),
+                    )
+                    self.tilesize = info["tilesize"]
+                    self.bgcolor = info["bgcolor"]
+                    self.fileext = info["filetype"]
+            except FileNotFoundError:
+                # backward compatibility
+                xrange = None
+                yrange = None
+                with open(f"{dir}/info.txt", "r") as file:
+                    while True:
+                        line = file.readline().strip()
+                        if len(line) == 0:
+                            break
+                        cols = line.split(" ")
+                        if cols[-1] == "xrange":
+                            xrange = Range(min_val=int(cols[0]), max_val=int(cols[1]))
+                        if cols[-1] == "yrange":
+                            yrange = Range(min_val=int(cols[0]), max_val=int(cols[1]))
+                        if cols[-1] == "tilesize":
+                            self.tilesize = [int(cols[0]), int(cols[1])]
+                        if cols[-1] == "bgcolor":
+                            self.bgcolor = [int(cols[0]), int(cols[1]), int(cols[2])]
+                        if cols[-1] == "filetype":
+                            self.fileext = cols[-1]
+                self.region = Rect(x_range=xrange, y_range=yrange)
         defaulttile = np.zeros((self.tilesize[1], self.tilesize[0], 3), dtype=np.uint8)
         self.bgcolor = np.array(self.bgcolor)
         # logger.info("Color: {0}".format(self.bgcolor))
@@ -105,11 +133,13 @@ def test():
 
     png = sys.argv[1]
     tilesize = int(sys.argv[2])
-    with CachedImage("new", tilesize=tilesize) as cimage:
-        cimage.put_image((10, 20), cv2.imread(png))
-        cimage.put_image((0, 0), cv2.imread(png))
-        image = cimage.get_image()
-        cv2.imshow("image", image)
+    with CachedImage("new", tilesize=tilesize) as tiled_image:
+        tiled_image[10:, 20:] = cv2.imread(png)
+        tiled_image[-10:, -20:] = cv2.imread(png)
+        image = tiled_image[:, :]
+
+    with CachedImage("inherit", dir="image.pngs") as tiled_image:
+        cv2.imshow("image", tiled_image[:, :])
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
