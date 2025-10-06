@@ -2,7 +2,7 @@ import logging
 
 # external modules
 import numpy as np
-from tiledimage import Rect, Range
+from pyperbox import Rect, Range
 import cv2
 
 
@@ -111,6 +111,8 @@ class TiledImage:
         logger = logging.getLogger()
         if rect is None:
             rect = self.rect
+        if rect is None:
+            return
         logger.debug(f"get_region region:{rect}")
         # # region.x_rangeが0:や:infの場合には、それぞれself.regionのx_rangeを使用する
         if rect.left == 0:
@@ -131,7 +133,6 @@ class TiledImage:
             dst_height = rect.height
             scale = 1.0
 
-        print(f"{width=}, {rect=},{dst_width=}, {dst_height=}, {scale=}")
         image = np.zeros((dst_height, dst_width, 3), dtype=np.uint8)
         image[:, :] = self.bgcolor
         for tile, overlap in self.tiles_containing(rect):
@@ -172,7 +173,7 @@ class TiledImage:
             # ]
         return image
 
-    def put_image(self, position, image, linear_alpha=None):
+    def put_image(self, position, image, linear_alpha=None, full_alpha=None):
         """
         split the existent tiles
         and put a big single tile.
@@ -188,7 +189,6 @@ class TiledImage:
             self.rect = rect
         else:
             self.rect |= rect
-        print(f"{rect=}, {self.rect=}")
         for tile, overlap in self.tiles_containing(rect, includeempty=True):
             if overlap is None:
                 continue
@@ -200,28 +200,35 @@ class TiledImage:
             src = self.tiles[tile]
             originx, originy = tile
 
-            if linear_alpha is None:
+            dy0 = overlap.top - originy
+            dy1 = overlap.bottom - originy
+            dx0 = overlap.left - originx
+            dx1 = overlap.right - originx
+            sx0 = overlap.left - rect.left
+            sx1 = overlap.right - rect.left
+            sy0 = overlap.top - rect.top
+            sy1 = overlap.bottom - rect.top
+            if linear_alpha is None and full_alpha is None:
                 src[
-                    overlap.top - originy : overlap.bottom - originy,
-                    overlap.left - originx : overlap.right - originx,
+                    dy0:dy1,
+                    dx0:dx1,
                 ] = image[
-                    overlap.top - rect.top : overlap.bottom - rect.top,
-                    overlap.left - rect.left : overlap.right - rect.left,
+                    sy0:sy1,
+                    sx0:sx1,
                 ]
             else:
-                dy0 = overlap.top - originy
-                dy1 = overlap.bottom - originy
-                dx0 = overlap.left - originx
-                dx1 = overlap.right - originx
-                sx0 = overlap.left - rect.left
-                sx1 = overlap.right - rect.left
-                sy0 = overlap.top - rect.top
-                sy1 = overlap.bottom - rect.top
-                alpha = linear_alpha[np.newaxis, :, np.newaxis]
-                src[dy0:dy1, dx0:dx1, :] = (
-                    alpha[:, sx0:sx1, :] * image[sy0:sy1, sx0:sx1, :]
-                    + (1 - alpha[:, sx0:sx1, :]) * src[dy0:dy1, dx0:dx1, :]
-                )
+                if full_alpha is not None:
+                    alpha = full_alpha[:, :, np.newaxis]
+                    src[dy0:dy1, dx0:dx1, :] = (
+                        alpha[sy0:sy1, sx0:sx1, :] * image[sy0:sy1, sx0:sx1, :]
+                        + (1 - alpha[sy0:sy1, sx0:sx1, :]) * src[dy0:dy1, dx0:dx1, :]
+                    )
+                else:
+                    alpha = linear_alpha[np.newaxis, :, np.newaxis]
+                    src[dy0:dy1, dx0:dx1, :] = (
+                        alpha[:, sx0:sx1, :] * image[sy0:sy1, sx0:sx1, :]
+                        + (1 - alpha[:, sx0:sx1, :]) * src[dy0:dy1, dx0:dx1, :]
+                    )
 
             # rewrite the item explicitly (for caching)
             self.tiles[tile] = src

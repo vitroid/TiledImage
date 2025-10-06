@@ -12,6 +12,7 @@ pylru = "^1.2.1"
 opencv-python-headless = "^4.11.0.86"
 tifffile = "^2025.9.9"
 rasterio = "^1.4.3"
+pyperbox = "^0.1.1"
 
 [tool.poetry.scripts]
 pngs2 = "tiledimage.pngs2:main"

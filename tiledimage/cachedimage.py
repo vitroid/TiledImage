@@ -5,7 +5,7 @@ import numpy as np
 
 from tiledimage.tiledimage import TiledImage
 import tiledimage.tilecache as tilecache
-from tiledimage import Rect, Range
+from pyperbox import Rect, Range
 
 
 class CachedImage(TiledImage):
@@ -113,12 +113,12 @@ class CachedImage(TiledImage):
             json.dump(info, file)
         self.tiles.done()  # タイルキャッシュの終了処理を呼び出す
 
-    def put_image(self, pos, img, linear_alpha=None):
-        super(CachedImage, self).put_image(pos, img, linear_alpha)
+    def put_image(self, pos, img, linear_alpha=None, full_alpha=None):
+        super(CachedImage, self).put_image(pos, img, linear_alpha, full_alpha)
         self.modified = True
         logger = getLogger()
         nmiss, naccess, cachesize = self.tiles.cachemiss()
-        logger.info(
+        logger.debug(
             "Cache miss {0}% @ {1} tiles".format(nmiss * 100 // naccess, cachesize)
         )
         self.tiles.adjust_cache_size()
