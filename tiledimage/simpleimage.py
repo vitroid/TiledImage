@@ -43,7 +43,7 @@ class SimpleImage:
         if y_slice.step is not None or x_slice.step is not None:
             raise NotImplementedError("ステップ付きスライスには未対応です")
 
-        return Rect.from_coords(x_start, x_stop, y_start, y_stop)
+        return Rect.from_bounds(x_start, x_stop, y_start, y_stop)
 
     def __getitem__(self, key):
         """スライスで領域を取得する
@@ -105,7 +105,7 @@ class SimpleImage:
         otherwise, a different algorithm is required.
         """
         h, w = image.shape[:2]
-        rect = Rect.from_coords(
+        rect = Rect.from_bounds(
             position[0], position[0] + w, position[1], position[1] + h
         )
         # expand the canvas
